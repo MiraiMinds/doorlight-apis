@@ -1,0 +1,6 @@
+__pycache__/
+logs
+uv.lock
+.env
+.venv
+src/voicebot.egg-info/
