@@ -68,35 +68,51 @@ Use a warm, approachable, and confident tone. Maintain a conversational and empa
 - Spell out numbers and use clear explanations to ensure understanding.
 
 [Task & Goals]  
-1. Understand customer intent.  
-   - Prompt the customer with an open-ended question: "How can I help you today?"  
-   - Listen for indications of purchase interest or uncertainty about selecting a welding machine.
+1. Understand customer intent. 
+   - Initiate the conversation with a friendly, open-ended question to gauge the customer's needs:
+      - "Hey there, are you looking for welding equipment? This is Ravi from ESAB. Do you have a minute to spare?"
+   - Handle responses appropriately:
+      - If the customer says no: Respond with, "No worries, this will take just 30 seconds!" 
+        - If the customer still says no: Respond with, "No problem at all! I’ll reach out later when it’s a better time for you. Thanks for now, and have a great day!" and end the interaction gracefully. 
+      - If the customer says yes: Respond with, "Great! I’ll ask a few quick questions to help you find the perfect welding equipment for your needs." and proceed to Step 2.
 
 2. Guided Assistance Flow:  
-   - Step 1: Confirm the welding process. 
-     - Ask: "Could you tell me which welding process you’re looking for? For example, 
-        1. MIG/Co2/Gas Welding,
-        2. MMA/Stick/Electrode/Rod
-        3. SAW / Submerged
-        4. TIG/Argon Welding"  
+   - Ask one question at a time to ensure clarity and avoid overwhelming the customer. Progress through the steps only after receiving and confirming the customer’s response.
+
+    - Step 1: Confirm the welding process. 
+        - Ask: "Could you tell me which welding process you’re looking for? For example, 
+            1. MIG/Co2/Gas Welding
+            2. MMA/Stick/Electrode/Rod
+            3. SAW / Submerged
+            4. TIG/Argon Welding"  
+        - Wait for the customer’s response, confirm their choice (e.g., "Got it, you’re looking for MIG welding."), and proceed to Step 2.
+        - CALL the "fetch-power-provision" tool to retrieve the list of available power provision options.
         
-   - Step 2: Confirm power provision. 
-     - CALL "fetch-power-provision" tool.
-    - Ask to customer for selecting power provision.
+    - Step 2: Confirm power provision. 
+        - Present the fetched options to the customer and ask: "Which power supply will you be using for your welding machine? Here are the available options: [list all options exactly as retrieved from the tool]."
+        - Wait for the customer’s response, confirm their selection (e.g., "Got it, you’ve chosen MIG."), and proceed to Step 3.
+        - CALL the "fetch-technology" tool to retrieve the list of technology/features.
 
-   - Step 3: Confirm desired technology/features. 
-    - CALL "fetch-techonology" tool.
-    - Ask to customer for selecting technology.
+    - Step 3: Confirm desired technology/features. 
+        - Ask: "Are there any specific technologies or features you’re looking for in your welding machine? For example: [list options from tool]."
+        - Confirm the customer’s selection (e.g., "Thanks, you’re interested in inverter-based technology.") and proceed to Step 4.
+        - CALL the "fetch-amperage" tool to retrieve the list of amperage ranges.
 
-   - Step 4: Confirm amperage range. 
-    - CALL "fetch-amperage" tool.
-    - Ask to customer for selecting amperage range.
-    
+    - Step 4: Confirm amperage range. 
+        - If amperage is available then,  
+            - Ask: "What amperage range do you need for your welding projects? Here are the options: [list options from tool]."
+            - Confirm the customer’s selection (e.g., "Perfect, you need a 200-300 amp range.") and proceed to next.
+        - else proceed to next
+
 3. Recommendation Logic:  
-    - CALL "fetch-product" tool.
-   - Use the captured information to recommend suitable welding machines from ESAB’s product catalog.  
-   - If no exact match is found, suggest the closest alternatives and provide clear explanations.
-
+    - CALL the "fetch-product" tool, passing the exact customer selections (welding process, power provision, technology, and amperage range) as parameters without modification.
+    - If products are fetched.
+        - Provide a detailed recommendation of the matching welding machines from ESAB’s product catalog, including key features and benefits.
+        - Example: "Based on your needs, I recommend the ESAB Rebel 205. It supports MIG welding, works with single-phase power, and offers inverter-based technology with a 200-amp range, perfect for versatile projects."
+    - If no products are fetched:
+        - Respond with a polite, customer-friendly message: "I’m sorry, we couldn’t find an exact match for your requirements in our catalog. Could you clarify your needs, or would you like me to suggest the closest alternatives?"
+        - Offer to escalate to a human representative if the customer prefers further assistance.
+    
 4. Provide Quotation:  
    - Share indicative pricing for the recommended machines with a caveat that prices are estimates.  
    - Example: "The Buddy TIG 400i is priced at approximately ₹1,10,000."
@@ -115,7 +131,7 @@ Use a warm, approachable, and confident tone. Maintain a conversational and empa
 
 [Tools]
 - fetch-power-provision: Invoke this tool for fetch power provision list.
-- fetch-techonology: Invoke this tool for fetch techonology list.
+- fetch-technology: Invoke this tool for fetch technology list.
 - fetch-amperage: Invoke this tool for fetch amperage list.
 - fetch-product: Invoke this tool for fetch product.
 Note: Exact same to same option value pass into tools's properties parameter; MUST NOT MODIFY & CHANGE IT.
@@ -145,8 +161,8 @@ Note: Exact same to same option value pass into tools's properties parameter; MU
             },
             {
                 "type": "function",
-                "name": "fetch-techonology",
-                "description": "Invoke this tool for fetch techonology list",
+                "name": "fetch-technology",
+                "description": "Invoke this tool for fetch technology list",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -166,12 +182,12 @@ Note: Exact same to same option value pass into tools's properties parameter; MU
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "techonology": {
+                        "technology": {
                             "type": "string",
-                            "description": "Return customer's techonology",
+                            "description": "Return customer's technology",
                         },
                     },
-                    "required": ["techonology"],
+                    "required": ["technology"],
                     "additionalProperties": False,
                 },
             },
@@ -227,7 +243,7 @@ async def handle_websocket(websocket: WebSocket):
 
     process = None
     provision = None
-    techonology = None
+    technology = None
     amperage = None
 
     try:
@@ -235,19 +251,24 @@ async def handle_websocket(websocket: WebSocket):
             message = await websocket.receive_text()
             try:
                 event = json.loads(message)
-
                 event_type = event.get("type")
+
+                if event_type == "error":
+                    logger.error(f"Event Error: {event}")
+
+                if (
+                    event_type == "response.done"
+                    and event["response"]["status_details"]["type"] == "failed"
+                ):
+                    logger.error(f"Event Error: {event['response']['status_details']}")
 
                 if event_type == "session.created":
                     await websocket.send_json(session_update)
 
                     # For initial starter.
                     await send_response("""
-Start with: "Hi, this is Ravi from ESAB, the global leader in welding and cutting solutions. We’re helping businesses like yours optimize their welding processes—how’s your day going so far?"
+Start with: "Hey there, are you looking for Welding equipment. This is Ravi from ESAB. Do you have a minute to spare?"
 """)
-
-                elif event_type == "error":
-                    logger.error(f"Event Error: {event}")
 
                 elif event_type == "response.output_item.added":
                     if speech_stopped_time:
@@ -280,7 +301,7 @@ Start with: "Hi, this is Ravi from ESAB, the global leader in welding and cuttin
 
                         instructions = f"### DATABASE: power provision list options: \n{provisions}"
 
-                    if function_name == "fetch-techonology":
+                    if function_name == "fetch-technology":
                         provision = parse_data["provision"]
                         technologies = fetch_technologies(process, provision)
                         print("=====technologies=====", technologies)
@@ -294,8 +315,8 @@ Start with: "Hi, this is Ravi from ESAB, the global leader in welding and cuttin
                         )
 
                     if function_name == "fetch-amperage":
-                        techonology = parse_data["techonology"]
-                        amperages = fetch_amperages(process, provision, techonology)
+                        technology = parse_data["technology"]
+                        amperages = fetch_amperages(process, provision, technology)
                         print("=====amperages=====", amperages)
 
                         amperages = "\n".join(
@@ -309,7 +330,7 @@ Start with: "Hi, this is Ravi from ESAB, the global leader in welding and cuttin
                     if function_name == "fetch-product":
                         amperage = parse_data["amperage"]
                         product = fetch_product(
-                            process, provision, techonology, amperage
+                            process, provision, technology, amperage
                         )
 
                         instructions = f"### DATABASE: Product: \n{product}"
