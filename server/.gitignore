@@ -1,6 +1,10 @@
+# Python-generated files
 __pycache__/
-logs
-uv.lock
-.env
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
 .venv
-src/voicebot.egg-info/
