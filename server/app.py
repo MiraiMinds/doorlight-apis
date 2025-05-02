@@ -38,8 +38,6 @@ async def get_property(item: dict = Body(...)):
     if "maxPrice" in arguments:
         params["maxPrice"] = arguments["maxPrice"]
 
-    print("=====params=====", params)
-
     response = await make_api_call(
         url="https://preprodapi.doorlight.com/v1/mls/property/list",
         method="get",
@@ -51,10 +49,8 @@ async def get_property(item: dict = Body(...)):
     results = ""
 
     if len(data):
-        print("===iff=======iff")
-
-    for i, p in enumerate(data, start=1):
-        results += f"""
+        for i, p in enumerate(data, start=1):
+            results += f"""
 Property {i}
 - Address: {p["property"]["address"]}
 - Price: {p["price"]} dollar
@@ -65,8 +61,6 @@ Property {i}
 - Living Area: {p["property"]["sqft"]} sqft
 - Year Built: {p["property"]["year_built"]}
 """
-
-    print("=====results=====", results)
 
     toolCallId = item["message"]["toolCallList"][0]["id"]
 
