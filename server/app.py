@@ -16,9 +16,8 @@ app.add_middleware(
 
 
 @app.post("/fetch-property")
-async def get_property(item: dict = Body(...)):
+async def get_property(arguments: dict = Body(...)):
     logger.info("==> API CALL: fetch-property")
-    arguments = item["message"]["toolCallList"][0]["function"]["arguments"]
     logger.debug(f"==> arguments: {arguments}")
 
     params = {
@@ -62,19 +61,12 @@ Property {i}
 - Year Built: {p["property"]["year_built"]}
 """
 
-    toolCallId = item["message"]["toolCallList"][0]["id"]
-
     return {
-        "results": [
-            {
-                "toolCallId": toolCallId,
-                "result": f"### DATABASE: suitable property: \n{results}",
-            }
-        ]
+        "result": f"### DATABASE: suitable property: \n{results}",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app:app", host="0.0.0.0", port=3001)
+    uvicorn.run("app:app", host="0.0.0.0", port=3000)
